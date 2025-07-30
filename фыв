@@ -1,0 +1,51 @@
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+
+function App() {
+  const [components, setComponents] = useState([]);
+
+  useEffect(() => {
+    axios.get('http://localhost:8000/components')
+      .then(response => setComponents(response.data))
+      .catch(error => console.error(error));
+  }, []);
+
+  return (
+    <div style={{ padding: '20px' }}>
+      <h1>Список компонентов</h1>
+      <table border="1" cellPadding="8">
+        <thead>
+          <tr>
+            <th>Название</th>
+            <th>Импортный?</th>
+            <th>Страна</th>
+            <th>Аналог</th>
+            <th>Замещение</th>
+          </tr>
+        </thead>
+        <tbody>
+          {components.map(comp => (
+            <tr key={comp.id}>
+              <td>{comp.name}</td>
+              <td>{comp.is_imported ? 'Да' : 'Нет'}</td>
+              <td>{comp.origin_country}</td>
+              <td>{comp.domestic_alternative}</td>
+              <td>{comp.substitution_status}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <h2 style={{ marginTop: '40px' }}>PowerGuide Viewer</h2>
+      <iframe
+        src="https://pwg-udm.igatec.com/power-catalogs/app/ws/ick_IN_WORK?path=febd5d7bf66ff8fce1fd56a4b1d78e98,650da67330700d3e936210ee1ffcbc24"
+        title="PowerGuide Viewer"
+        width="100%"
+        height="500px"
+        style={{ border: '1px solid #ccc', borderRadius: '8px' }}
+      ></iframe>
+    </div>
+  );
+}
+
+export default App;
