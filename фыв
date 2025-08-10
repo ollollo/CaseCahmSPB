@@ -1,51 +1,129 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import { FileText, Search, Wrench, RefreshCw, Flag, Tag } from "lucide-react";
+import React from "react";
 
-function App() {
-  const [components, setComponents] = useState([]);
+const inventoryData = [
+  {
+    fullData: {
+      "Номер детали": "A-1001",
+      "Прошлая используемая деталь": "A-0999",
+      "Следующая используемая деталь": "A-1002",
+      "Количество на складе": "15",
+      "Дата поставки": "01.02.2025",
+      "Длительность последней доставки": "14 дней",
+      "Поставщик": "ООО 'ТехСнаб'",
+      "Страна производства": "Германия",
+      "Дата ТО": "15.03.2025",
+      "Дата замены": "10.02.2025",
+      "Дата импортозамещения": "20.01.2025",
+      "Дата изменения номера": "05.01.2025",
+      "Дата тестирования": "25.12.2024",
+      "Дата производства": "15.12.2024",
+    },
+  },
+];
 
-  useEffect(() => {
-    axios.get('http://localhost:8000/components')
-      .then(response => setComponents(response.data))
-      .catch(error => console.error(error));
-  }, []);
+const iconMap = {
+  ТО: <Wrench size={16} color="#2563eb" />,
+  Замена: <RefreshCw size={16} color="#16a34a" />,
+  Импортозамещение: <Flag size={16} color="#dc2626" />,
+  Изменение: <Tag size={16} color="#9333ea" />,
+  default: <FileText size={16} color="#6b7280" />,
+};
+
+const HistorySection = () => {
+  const [searchNumber, setSearchNumber] = React.useState("");
+  const [selectedPart, setSelectedPart] = React.useState(null);
+
+  const handleSearch = () => {
+    const found = inventoryData.find(
+      (item) =>
+        item.fullData["Номер детали"]?.toLowerCase().trim() ===
+        searchNumber.toLowerCase().trim()
+    );
+    setSelectedPart(found || null);
+  };
+
+  const historyData = React.useMemo(() => {
+    if (!selectedPart) return [];
+
+    return Object.entries(selectedPart.fullData)
+      .filter(([key, value]) => {
+        if (!value) return false;
+        return /\d{1,2}[./-]\d{1,2}[./-]\d{2,4}/.test(value);
+      })
+      .map(([key, value]) => {
+        const eventLabel = key.replace("Дата ", "").trim();
+        const icon =
+          eventLabel.includes("ТО") ? iconMap["ТО"] :
+          eventLabel.includes("замен") ? iconMap["Замена"] :
+          eventLabel.includes("импорт") ? iconMap["Импортозамещение"] :
+          eventLabel.includes("номер") ? iconMap["Изменение"] :
+          iconMap.default;
+
+        return {
+          date: value,
+          event: eventLabel,
+          icon,
+        };
+      })
+      .sort((a, b) => {
+        const parse = (d) => {
+          const [day, month, year] = d.split(/[./-]/).map(Number);
+          return new Date(year < 100 ? 2000 + year : year, month - 1, day);
+        };
+        return parse(b.date) - parse(a.date);
+      });
+  }, [selectedPart]);
 
   return (
-    <div style={{ padding: '20px' }}>
-      <h1>Список компонентов</h1>
-      <table border="1" cellPadding="8">
-        <thead>
-          <tr>
-            <th>Название</th>
-            <th>Импортный?</th>
-            <th>Страна</th>
-            <th>Аналог</th>
-            <th>Замещение</th>
-          </tr>
-        </thead>
-        <tbody>
-          {components.map(comp => (
-            <tr key={comp.id}>
-              <td>{comp.name}</td>
-              <td>{comp.is_imported ? 'Да' : 'Нет'}</td>
-              <td>{comp.origin_country}</td>
-              <td>{comp.domestic_alternative}</td>
-              <td>{comp.substitution_status}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div style={{ padding: "2rem" }}>
+      <div style={{ background: "white", borderRadius: "16px", padding: "2rem", boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)" }}>
+        <h2 style={{ fontSize: "2rem", fontWeight: "bold", color: "#374151", marginBottom: "2rem", display: "flex", alignItems: "center" }}>
+          <FileText style={{ marginRight: "1rem", color: "#3b82f6" }} size={32} />
+          История детали
+        </h2>
 
-      <h2 style={{ marginTop: '40px' }}>PowerGuide Viewer</h2>
-      <iframe
-        src="https://pwg-udm.igatec.com/power-catalogs/app/ws/ick_IN_WORK?path=febd5d7bf66ff8fce1fd56a4b1d78e98,650da67330700d3e936210ee1ffcbc24"
-        title="PowerGuide Viewer"
-        width="100%"
-        height="500px"
-        style={{ border: '1px solid #ccc', borderRadius: '8px' }}
-      ></iframe>
+        {/* Поле поиска */}
+        <div style={{ display: "flex", gap: "1rem", marginBottom: "2rem" }}>
+          <input
+            type="text"
+            placeholder="Введите номер детали..."
+            value={searchNumber}
+            onChange={(e) => setSearchNumber(e.target.value)}
+            style={{ flex: "1", padding: "0.75rem 1rem", borderRadius: "8px", border: "1px solid #d1d5db", fontSize: "1rem" }}
+          />
+          <button
+            onClick={handleSearch}
+            style={{ background: "#3b82f6", color: "white", border: "none", padding: "0.75rem 1rem", borderRadius: "8px", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.5rem" }}
+          >
+            <Search size={18} /> Найти
+          </button>
+        </div>
+
+        {/* История */}
+        {selectedPart && (
+          <div style={{ border: "2px solid #e5e7eb", borderRadius: "12px", padding: "1.5rem", background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)" }}>
+            <h4 style={{ fontWeight: "600", marginBottom: "1rem" }}>Историческая линия:</h4>
+            <div style={{ position: "relative", paddingLeft: "20px", borderLeft: "2px solid #3b82f6" }}>
+              {historyData.map((h, idx) => (
+                <div key={idx} style={{ marginBottom: "1.5rem", position: "relative" }}>
+                  <div style={{ position: "absolute", left: "-9px", top: "4px", width: "16px", height: "16px", background: "white", border: "2px solid #3b82f6", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {h.icon}
+                  </div>
+                  <div>
+                    <strong>{h.date}</strong>
+                    <p style={{ margin: 0 }}>{h.event}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {searchNumber && !selectedPart && <p style={{ color: "#ef4444" }}>Деталь с таким номером не найдена</p>}
+      </div>
     </div>
   );
-}
+};
 
-export default App;
+export default HistorySection;
